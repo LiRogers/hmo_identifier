@@ -9,6 +9,7 @@ Import reference geographical data sets
 import pandas as pd
 import requests
 import geopandas as gpd
+import shapely
 from shapely import wkt
 from typing import Union
 import sys
