@@ -24,6 +24,7 @@ import os
 
 # %% Airbnb data
 
+
 def airbnb(borough: str = None) -> pd.DataFrame:
     """
     Fetch data on AirBnB listings in London.
@@ -47,26 +48,33 @@ def airbnb(borough: str = None) -> pd.DataFrame:
     req.raise_for_status()
     html_page = req.content
     soup = BeautifulSoup(html_page)
-    links = [link.get('href') for link in
-             soup.findAll('a',
-                          href=re.compile("london/.+listings\.csv\.gz"))]
+    links = [
+        link.get("href")
+        for link in soup.findAll("a", href=re.compile("london/.+listings\.csv\.gz"))
+    ]
     most_recent_link = list(sorted(set(links)))[-1]
-    df = pd.read_csv(most_recent_link, compression='gzip',
-                     dtype = {'weekly_price': str,
-                              'monthly_price': str,
-                              'license': str,
-                              'jurisdiction_names': str})
+    df = pd.read_csv(
+        most_recent_link,
+        compression="gzip",
+        dtype={
+            "weekly_price": str,
+            "monthly_price": str,
+            "license": str,
+            "jurisdiction_names": str,
+        },
+    )
     if borough is not None:
-         borough_clean = utils.clean_borough_names(borough)
-         df = df.loc[
-             df.neighbourhood_cleansed.apply(
-                 utils.clean_borough_names
-                 ) == borough_clean,
-             :].reset_index(drop=True)
+        borough_clean = utils.clean_borough_names(borough)
+        df = df.loc[
+            df.neighbourhood_cleansed.apply(utils.clean_borough_names) == borough_clean,
+            :,
+        ].reset_index(drop=True)
 
     return df
 
+
 # %% Census data
+
 
 def fetch_census(table: str, borough: str = None) -> pd.DataFrame:
     """
@@ -89,26 +97,28 @@ def fetch_census(table: str, borough: str = None) -> pd.DataFrame:
     if borough is not None:
         borough_name = utils.match_borough_name(borough)
         oas = reference.london_output_areas(borough=borough_name)
-    else :
+    else:
         oas = reference.london_output_areas()
     census_urls = {
         "hhold_comp_bedrooms": "https://www.nomisweb.co.uk/api/v01/dataset/nm_861_1.bulk.csv",
         "hhold_comp_occ_rating": "https://www.nomisweb.co.uk/api/v01/dataset/nm_865_1.bulk.csv",
-        "tenure_occ_rating": "https://www.nomisweb.co.uk/api/v01/dataset/nm_867_1.bulk.csv"
-        }
+        "tenure_occ_rating": "https://www.nomisweb.co.uk/api/v01/dataset/nm_867_1.bulk.csv",
+    }
     url = census_urls[table]
-        
+
     df = pd.read_csv(url)
-    
-    df.columns = (df.columns
-                  .str.replace("[:; ]+", "_")
-                  .str.replace("\-([0-9])", "neg_\\1")
-                  .str.replace("\+([0-9])", "plus_\\1")
-                  .str.replace("[\)\(\-]+", "")
-                  .str.lower())
-    df = df.loc[df.geography_code.isin(oas.oacd.tolist())]   
-    
+
+    df.columns = (
+        df.columns.str.replace("[:; ]+", "_")
+        .str.replace("\-([0-9])", "neg_\\1")
+        .str.replace("\+([0-9])", "plus_\\1")
+        .str.replace("[\)\(\-]+", "")
+        .str.lower()
+    )
+    df = df.loc[df.geography_code.isin(oas.oacd.tolist())]
+
     return df
+
 
 def merge_census(borough: str = None) -> pd.DataFrame:
     """
@@ -125,10 +135,14 @@ def merge_census(borough: str = None) -> pd.DataFrame:
         A dataframe of census data from all tables available through fetch_census
 
     """
-    census_tables = ['hhold_comp_bedrooms', 'hhold_comp_occ_rating', 'tenure_occ_rating']
+    census_tables = [
+        "hhold_comp_bedrooms",
+        "hhold_comp_occ_rating",
+        "tenure_occ_rating",
+    ]
     tables = []
     for table in census_tables:
-        df = fetch_census(table, borough = borough)
+        df = fetch_census(table, borough=borough)
         tables.append(df)
     start = True
     for table in tables:
@@ -137,7 +151,7 @@ def merge_census(borough: str = None) -> pd.DataFrame:
         else:
             df = df.merge(table)
         start = False
-    
+
     return df
 
 
@@ -163,10 +177,12 @@ def env_to_coord_str(env: shapely.geometry.Polygon) -> str:
     min_y = min([y for (y, x) in ext_coords_yx])
     max_x = max([x for (y, x) in ext_coords_yx])
     min_x = min([x for (y, x) in ext_coords_yx])
-    ext_coords_ordered = [(min_y, min_x),
-                          (max_y, min_x),
-                          (max_y, max_x),
-                          (min_y, max_x)]
+    ext_coords_ordered = [
+        (min_y, min_x),
+        (max_y, min_x),
+        (max_y, max_x),
+        (min_y, max_x),
+    ]
     coords_str = ":".join([f"{x},{y}" for (x, y) in ext_coords_ordered])
     return coords_str
 
@@ -189,7 +205,7 @@ def crime_month(poly: shapely.geometry.Polygon, date: str = None) -> gpd.GeoData
         All crime data in relevant month and polygon at street level.
 
     """
-    API = 'https://data.police.uk/api/crimes-street/all-crime'
+    API = "https://data.police.uk/api/crimes-street/all-crime"
     # Get a list of the polygon bounding box coords
     # Get this into the right format for the API
     # lat,long:lat,long...
@@ -200,22 +216,35 @@ def crime_month(poly: shapely.geometry.Polygon, date: str = None) -> gpd.GeoData
         env = envs[pol_num - 1]
         pol_num += 1
         coords_str = env_to_coord_str(env)
-        params = {'poly': coords_str}
+        params = {"poly": coords_str}
         if date is not None:
-            params['date'] = date
+            params["date"] = date
         # Send a get request
         r = requests.get(API, params=params)
         if r.status_code == 503:
-            new_envs = [shapely.affinity.scale(env, xfact=0.5, yfact=0.5,origin=(env.bounds[0], env.bounds[1])),shapely.affinity.scale(env, xfact=0.5, yfact=0.5,origin=(env.bounds[0], env.bounds[3])),shapely.affinity.scale(env, xfact=0.5, yfact=0.5,origin=(env.bounds[2], env.bounds[1])),shapely.affinity.scale(env, xfact=0.5, yfact=0.5,origin=(env.bounds[2], env.bounds[3]))]
+            new_envs = [
+                shapely.affinity.scale(
+                    env, xfact=0.5, yfact=0.5, origin=(env.bounds[0], env.bounds[1])
+                ),
+                shapely.affinity.scale(
+                    env, xfact=0.5, yfact=0.5, origin=(env.bounds[0], env.bounds[3])
+                ),
+                shapely.affinity.scale(
+                    env, xfact=0.5, yfact=0.5, origin=(env.bounds[2], env.bounds[1])
+                ),
+                shapely.affinity.scale(
+                    env, xfact=0.5, yfact=0.5, origin=(env.bounds[2], env.bounds[3])
+                ),
+            ]
             envs = envs + new_envs
             continue
         elif r.status_code == 500:
             time.sleep(20)
             r = requests.get(API, params=params)
-            
+
         r.raise_for_status()
         response = r.json()
-        
+
         # Convert to pandas df
         df = json_normalize(response)
         df.columns = df.columns.str.replace(".", "_")
@@ -223,14 +252,17 @@ def crime_month(poly: shapely.geometry.Polygon, date: str = None) -> gpd.GeoData
     all_df.location_latitude = all_df.location_latitude.astype(float)
     all_df.location_longitude = all_df.location_longitude.astype(float)
     # Convert to geopandas
-    gdf = gpd.GeoDataFrame(all_df,
-                           geometry = gpd.points_from_xy(
-                               all_df['location_longitude'],
-                               all_df['location_latitude']),
-                           crs="EPSG:4326")
+    gdf = gpd.GeoDataFrame(
+        all_df,
+        geometry=gpd.points_from_xy(
+            all_df["location_longitude"], all_df["location_latitude"]
+        ),
+        crs="EPSG:4326",
+    )
     # Only keep points within the original polygon
     gdf = gdf.loc[gdf.geometry.within(poly), :]
     return gdf
+
 
 def crime_year(borough: str = None, date: str = None) -> gpd.GeoDataFrame:
     """
@@ -261,8 +293,9 @@ def crime_year(borough: str = None, date: str = None) -> gpd.GeoDataFrame:
         all_crime.append(crime)
         if date is None:
             date = crime.month.unique()[0]
-        date = (datetime.date(int(date[:4]), int(date[-2:]), 1)
-                - datetime.timedelta(days=2)).strftime("%Y-%m")
+        date = (
+            datetime.date(int(date[:4]), int(date[-2:]), 1) - datetime.timedelta(days=2)
+        ).strftime("%Y-%m")
         num_months += 1
     df = pd.concat(all_crime)
 
@@ -270,7 +303,8 @@ def crime_year(borough: str = None, date: str = None) -> gpd.GeoDataFrame:
 
 
 # %% IMD
-    
+
+
 def imd(borough: str = None) -> pd.DataFrame:
     """
     
@@ -290,24 +324,27 @@ def imd(borough: str = None) -> pd.DataFrame:
     """
     url = "https://assets.publishing.service.gov.uk/government/uploads/system/uploads/attachment_data/file/833970/File_1_-_IMD2019_Index_of_Multiple_Deprivation.xlsx"
     df = pd.read_excel(url, sheet_name="IMD2019")
-    df.columns = (df.columns
-                  .str.lower()
-                  .str.replace(" ", "_")
-                  .str.replace("\(|\)", "")
-                  .str.replace("name", "nm")
-                  .str.replace("code", "cd")
-                  .str.replace("lsoa_", "lsoa")
-                  .str.replace("local_authority_district_", "lad")
-                  .str.replace("index_of_multiple_deprivation_", "")
-                  .str.replace("_[0-9]{4}$", ""))
+    df.columns = (
+        df.columns.str.lower()
+        .str.replace(" ", "_")
+        .str.replace("\(|\)", "")
+        .str.replace("name", "nm")
+        .str.replace("code", "cd")
+        .str.replace("lsoa_", "lsoa")
+        .str.replace("local_authority_district_", "lad")
+        .str.replace("index_of_multiple_deprivation_", "")
+        .str.replace("_[0-9]{4}$", "")
+    )
     if borough is not None:
         df = df.loc[df.ladnm == borough, :]
     else:
         df = df.loc[df.ladcd.str.startswith("E09"), :]
-    
+
     return df
 
+
 # %% EPC data
+
 
 def epc(api_key: str, borough: str = None) -> pd.DataFrame:
     """
@@ -329,47 +366,50 @@ def epc(api_key: str, borough: str = None) -> pd.DataFrame:
         EPC data as a pandas dataframe
 
     """
-   
+
     url = "https://epc.opendatacommunities.org/api/v1/domestic/search"
 
     codes = reference.london_boroughs(borough).ladcd.tolist()
     dfs = []
     for code in codes:
         num_rows = 5000
-    
+
         current_date = datetime.datetime.now()
-        query = {'local-authority': code,
-                 'from-month': 1,
-                 'from-year': 2008,
-                 'to-month': current_date.month,
-                 'to-year': current_date.year}
-    
+        query = {
+            "local-authority": code,
+            "from-month": 1,
+            "from-year": 2008,
+            "to-month": current_date.month,
+            "to-year": current_date.year,
+        }
+
         while num_rows == 5000:
-            r = requests.get(url=url,
-                               params=query,
-                               headers={"Authorization": "Basic " + api_key,
-                                        "Accept": "text/csv"})
+            r = requests.get(
+                url=url,
+                params=query,
+                headers={"Authorization": "Basic " + api_key, "Accept": "text/csv"},
+            )
             r.raise_for_status()
-            
-            if len(r.content.decode('utf-8')) > 0:
-                df = pd.read_csv(io.StringIO(r.content.decode('utf-8')),
-                                 dtype=str)
+
+            if len(r.content.decode("utf-8")) > 0:
+                df = pd.read_csv(io.StringIO(r.content.decode("utf-8")), dtype=str)
                 dfs.append(df)
                 num_rows = df.shape[0]
                 min_date = datetime.datetime.strptime(
-                    df.loc[num_rows - 1, 'lodgement-date'], "%Y-%m-%d"
-                    ).date()
+                    df.loc[num_rows - 1, "lodgement-date"], "%Y-%m-%d"
+                ).date()
                 next_date = min_date + dateutil.relativedelta.relativedelta(months=1)
-                query['to-month'] = next_date.month
-                query['to-year'] = next_date.year
+                query["to-month"] = next_date.month
+                query["to-year"] = next_date.year
             else:
                 num_rows = 0
     if len(dfs) > 0:
         all_df = pd.concat(dfs).drop_duplicates().reset_index(drop=True)
-        all_df.columns = (all_df.columns
-                          .str.lower()
-                          .str.replace('-', "_")
-                          .str.replace("building_reference_number", "brn"))
+        all_df.columns = (
+            all_df.columns.str.lower()
+            .str.replace("-", "_")
+            .str.replace("building_reference_number", "brn")
+        )
     else:
         all_df = pd.DataFrame()
     return all_df
@@ -394,16 +434,30 @@ def land_registry(borough: str = None) -> pd.DataFrame:
 
     """
 
-    
     data_url = "http://prod.publicdata.landregistry.gov.uk.s3-website-eu-west-1.amazonaws.com/pp-"
-    cols = ['trans_id', 'price', 'date', 'postcode', 'prop_type', 'new_build',
-            'tenure_duration', 'paon', 'saon', 'street', 'locality',
-            'town_city', 'district', 'county', 'ppd_cat', 'status']
+    cols = [
+        "trans_id",
+        "price",
+        "date",
+        "postcode",
+        "prop_type",
+        "new_build",
+        "tenure_duration",
+        "paon",
+        "saon",
+        "street",
+        "locality",
+        "town_city",
+        "district",
+        "county",
+        "ppd_cat",
+        "status",
+    ]
     current_date = datetime.datetime.today().date()
     dfs = []
     years = range(current_date.year, 1994, -1)
     boroughs = reference.london_boroughs(borough)
-    
+
     for year in years:
         url = f"{data_url}{year}.csv"
         r = requests.get(url)
@@ -412,60 +466,59 @@ def land_registry(borough: str = None) -> pd.DataFrame:
         else:
             continue
         df = df.loc[df.county == "GREATER LONDON", :]
-        df = df.assign(district = df.district.str.replace("CITY OF W", "W"),
-                       trans_id = df.trans_id.str.replace("{|}", ""))
-        df = df.loc[df.district.isin(boroughs.ladnm.str.upper()),:]
-        
+        df = df.assign(
+            district=df.district.str.replace("CITY OF W", "W"),
+            trans_id=df.trans_id.str.replace("{|}", ""),
+        )
+        df = df.loc[df.district.isin(boroughs.ladnm.str.upper()), :]
+
         dfs.append(df)
-    
+
     df = pd.concat(dfs)
-    
+
     return df
-    
+
 
 # %% Main
 if __name__ == "__main__":
-    
+
     if (len(sys.argv) == 1) | (sys.argv[1] == None):
         borough = None
     else:
-        borough = sys.argv[1]    
-    
+        borough = sys.argv[1]
+
     # %% Airbnb data
     abnb = airbnb(borough)
     file = "data/raw/open/airbnb.csv"
     print("Saving file", file)
     abnb.to_csv(file, index=False)
-    
+
     # %% Census data:
     census = merge_census(borough)
     file = "data/raw/open/census.csv"
     print("Saving file", file)
     census.to_csv(file, index=False)
-    
+
     # %% Crime data
     crime = crime_year(borough)
     file = "data/raw/open/crime.csv"
     print("Saving file", file)
-    (crime
-     .drop(columns=['geometry'])
-     .to_csv(file, index=False))
-    
+    (crime.drop(columns=["geometry"]).to_csv(file, index=False))
+
     # %% IMD data
     imd_data = imd(borough)
     file = "data/raw/open/imd.csv"
     print("Saving file", file)
     imd_data.to_csv(file, index=False)
-    
+
     # %% EPC data
     load_dotenv()
     api_key = os.getenv("epc_api_key")
-    epc_data = epc(api_key=api_key,
-                   borough=borough)
+    epc_data = epc(api_key=api_key, borough=borough)
     file = "data/raw/open/epc.csv"
     print("Saving file", file)
     epc_data.to_csv(file, index=False)
-    
+
     # %% Land registry data
     lr_data = land_registry(borough)
     file = "data/raw/open/land_registry.csv"

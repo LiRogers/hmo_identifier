@@ -24,7 +24,7 @@ def hmo_register() -> pd.DataFrame:
     url = "https://opendata.camden.gov.uk/api/views/x43g-c2rf/rows.csv?accessType=DOWNLOAD"
     df = pd.read_csv(url)
     df.columns = df.columns.str.lower().str.replace(" ", "_")
-    
+
     return df
 
 
@@ -43,12 +43,12 @@ def social_housing() -> pd.DataFrame:
     url = "https://opendata.camden.gov.uk/api/views/pkzy-2qkt/rows.csv?accessType=DOWNLOAD"
     df = pd.read_csv(url)
     df.columns = df.columns.str.lower().str.replace(" ", "_")
-    
+
     return df
 
 
 if __name__ == "__main__":
-    
+
     df = hmo_register()
     file = "data/raw/local/hmo_register.csv"
     print("Saving file", file)
@@ -57,4 +57,3 @@ if __name__ == "__main__":
     file = "data/raw/local/social_housing.csv"
     print("Saving file", file)
     df.to_csv(file, index=False)
-    
