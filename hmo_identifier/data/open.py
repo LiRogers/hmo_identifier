@@ -144,7 +144,7 @@ def merge_census(borough: str = None) -> pd.DataFrame:
 # %% Crime
 def env_to_coord_str(env: shapely.geometry.Polygon) -> str:
     """
-    Convert a polygon envelop to a string of coordinates to use the Police API.
+    Convert a polygon envelope to a string of coordinates to use the Police API.
 
     Parameters
     ----------
@@ -232,21 +232,24 @@ def crime_month(poly: shapely.geometry.Polygon, date: str = None) -> gpd.GeoData
     gdf = gdf.loc[gdf.geometry.within(poly), :]
     return gdf
 
-def crime_year(borough: str = None, date: str = None):
+def crime_year(borough: str = None, date: str = None) -> gpd.GeoDataFrame:
     """
     
+    Fetch yearly crime data from Police API
 
     Parameters
     ----------
     borough : str, optional
-        DESCRIPTION. The default is None.
+         London borough name. The default is None (all boroughs returned).
+        
     date : str, optional
-        DESCRIPTION. The default is None.
+        Final month of year of data requested in form YYYY-MM.
+        The default is None and returns the most recent year of data.
 
     Returns
     -------
-    df : TYPE
-        DESCRIPTION.
+    gdf : gpd.GeoDataFrame
+        All crime data in relevant year and borough at street level.
 
     """
     boroughs = reference.london_boroughs(borough=borough, inc_geom=True)
@@ -258,7 +261,6 @@ def crime_year(borough: str = None, date: str = None):
         all_crime.append(crime)
         if date is None:
             date = crime.month.unique()[0]
-        print(date)
         date = (datetime.date(int(date[:4]), int(date[-2:]), 1)
                 - datetime.timedelta(days=2)).strftime("%Y-%m")
         num_months += 1
@@ -272,16 +274,18 @@ def crime_year(borough: str = None, date: str = None):
 def imd(borough: str = None) -> pd.DataFrame:
     """
     
+    Fetch Index of Multiple Deprivation (IMD) data from 
+    (here)[https://www.gov.uk/government/statistics/english-indices-of-deprivation-2019].
 
     Parameters
     ----------
     borough : str, optional
-        DESCRIPTION. The default is None.
+         London borough name. The default is None (all boroughs returned).
 
     Returns
     -------
-    df : TYPE
-        DESCRIPTION.
+    df : pd.DataFrame
+        IMD data for the relevant area as a pandas dataframe.
 
     """
     url = "https://assets.publishing.service.gov.uk/government/uploads/system/uploads/attachment_data/file/833970/File_1_-_IMD2019_Index_of_Multiple_Deprivation.xlsx"
@@ -305,21 +309,24 @@ def imd(borough: str = None) -> pd.DataFrame:
 
 # %% EPC data
 
-def epc(api_key, borough: str = None) -> pd.DataFrame:
+def epc(api_key: str, borough: str = None) -> pd.DataFrame:
     """
     
+    Fetch Energy Performance Certificates (EPC) data from 
+    (here)[https://epc.opendatacommunities.org/].
+    An API key is needed.
 
     Parameters
     ----------
-    api_key : TYPE
-        DESCRIPTION.
+    api_key : str
+        An API key for the MHCLG EPC API.
     borough : str, optional
-        DESCRIPTION. The default is None.
+        London borough name. The default is None (all boroughs returned).
 
     Returns
     -------
-    all_df : TYPE
-        DESCRIPTION.
+    all_df : pd.DataFrame
+        EPC data as a pandas dataframe
 
     """
    
@@ -369,21 +376,24 @@ def epc(api_key, borough: str = None) -> pd.DataFrame:
 
 
 # %% Land registry
-def land_registry(borough):
+def land_registry(borough: str = None) -> pd.DataFrame:
     """
     
+    Fetch land registry price paid data from 
+    (here)[https://landregistry.data.gov.uk/].
 
     Parameters
     ----------
-    borough : TYPE
-        DESCRIPTION.
+    borough : str, optional
+        London borough name. The default is None (all boroughs returned).
 
     Returns
     -------
-    df : TYPE
-        DESCRIPTION.
+    df : pd.DataFrame
+        Land registry data as a pandas dataframe.
 
     """
+
     
     data_url = "http://prod.publicdata.landregistry.gov.uk.s3-website-eu-west-1.amazonaws.com/pp-"
     cols = ['trans_id', 'price', 'date', 'postcode', 'prop_type', 'new_build',
@@ -423,29 +433,41 @@ if __name__ == "__main__":
     
     # %% Airbnb data
     abnb = airbnb(borough)
-    abnb.to_csv("data/raw/open/airbnb.csv", index=False)
+    file = "data/raw/open/airbnb.csv"
+    print("Saving file", file)
+    abnb.to_csv(file, index=False)
     
     # %% Census data:
     census = merge_census(borough)
-    census.to_csv("data/raw/open/census.csv", index=False)
+    file = "data/raw/open/census.csv"
+    print("Saving file", file)
+    census.to_csv(file, index=False)
     
     # %% Crime data
     crime = crime_year(borough)
+    file = "data/raw/open/crime.csv"
+    print("Saving file", file)
     (crime
      .drop(columns=['geometry'])
-     .to_csv("data/raw/open/crime.csv", index=False))
+     .to_csv(file, index=False))
     
     # %% IMD data
     imd_data = imd(borough)
-    imd_data.to_csv("data/raw/open/imd.csv", index=False)
+    file = "data/raw/open/imd.csv"
+    print("Saving file", file)
+    imd_data.to_csv(file, index=False)
     
     # %% EPC data
     load_dotenv()
     api_key = os.getenv("epc_api_key")
     epc_data = epc(api_key=api_key,
                    borough=borough)
-    epc_data.to_csv("data/raw/open/epc.csv", index=False)
+    file = "data/raw/open/epc.csv"
+    print("Saving file", file)
+    epc_data.to_csv(file, index=False)
     
     # %% Land registry data
     lr_data = land_registry(borough)
-    lr_data.to_csv("data/raw/open/land_registry.csv", index=False)
+    file = "data/raw/open/land_registry.csv"
+    print("Saving file", file)
+    lr_data.to_csv(file, index=False)

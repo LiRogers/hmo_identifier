@@ -257,8 +257,14 @@ if __name__ == "__main__":
         borough = sys.argv[1]
 
     boroughs = london_boroughs(borough=borough, inc_geom=True)
-    boroughs.to_file("data/raw/reference/boroughs.shp")
+    file = "data/raw/reference/boroughs.shp"
+    print("Saving file", file)
+    boroughs.to_file(file)
     wards = london_wards(borough=borough, inc_geom=True)
-    wards.to_file("data/raw/reference/wards.shp")
+    file = "data/raw/reference/wards.shp"
+    print("Saving file", file)
+    wards.to_file(file)
     oas = london_output_areas(borough=borough, inc_geom=True)
-    oas.to_file("data/raw/reference/output_areas.shp")
+    file = "data/raw/reference/output_areas.shp"
+    print("Saving file", file)
+    oas.to_file(file)

@@ -8,14 +8,17 @@ Created on Wed Mar 18 15:47:45 2020
 import pandas as pd
 
 
-def hmo_register():
+def hmo_register() -> pd.DataFrame:
     """
+    Fetch the Camden HMO Register from
+    (here)[https://opendata.camden.gov.uk/Housing/HMO-Licensing-Register/x43g-c2rf].
+    Will need to be adjusted for your own borough.
     
 
     Returns
     -------
-    df : TYPE
-        DESCRIPTION.
+    df : pd.DataFrame
+        HMO register as a pandas dataframe.
 
     """
     url = "https://opendata.camden.gov.uk/api/views/x43g-c2rf/rows.csv?accessType=DOWNLOAD"
@@ -25,14 +28,16 @@ def hmo_register():
     return df
 
 
-def social_housing():
+def social_housing() -> pd.DataFrame:
     """
-    
+    Fetch data on Camden Housing stock from 
+    (here)[https://opendata.camden.gov.uk/Housing/Camden-Housing-Stock/pkzy-2qkt].
+    Will need to be adjusted for your own borough.
 
     Returns
     -------
-    df : TYPE
-        DESCRIPTION.
+    df : pd.DataFrame
+        Details of social housing as a pandas dataframe.
 
     """
     url = "https://opendata.camden.gov.uk/api/views/pkzy-2qkt/rows.csv?accessType=DOWNLOAD"
@@ -45,7 +50,11 @@ def social_housing():
 if __name__ == "__main__":
     
     df = hmo_register()
-    df.to_csv("data/raw/local/hmo_register.csv", index=False)
+    file = "data/raw/local/hmo_register.csv"
+    print("Saving file", file)
+    df.to_csv(file, index=False)
     df = social_housing()
-    df.to_csv("data/raw/local/social_housing.csv", index=False)
+    file = "data/raw/local/social_housing.csv"
+    print("Saving file", file)
+    df.to_csv(file, index=False)
     
