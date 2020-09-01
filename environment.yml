@@ -1,0 +1,14 @@
+# run: conda env create --file environment.yml
+name: hmo_identifier
+channels:
+    - conda-forge
+    - defaults
+dependencies:
+    - pandas=0.25.3
+    - psycopg2=2.8.4
+    - geopandas=0.6.3
+    - requests=2.22.0
+    - shapely=1.7.0
+    - python-dotenv=0.10.5
+    - folium=0.10.1
+    - spyder=4.0.1
