@@ -103,26 +103,31 @@ def gazateer(
 # %% UK Buildings
 
 
-def uk_buildings(borough: str = None) -> dict:
+def uk_buildings(ukb_file: str, ukb_link_file: str, borough: str = None) -> dict:
     """
     Fetch UK Buildings Data
-    This is set up for fetching the data from within the GLA network,
-    and will need to be adjusted for your own set up.
+    This is set up for fetching the data from a geodatabase in your
+    local system.
     
     More information on UK Buildings data can be found
     (here)[https://www.geomni.co.uk/ukbuildings].
+    
 
     Parameters
     ----------
+    ukb_file : str
+        file path of UK buildings data (geodatabase or similar).
+    ukb_link_file : str
+        file path of the UK buildings link file
+        (contains lookup between UK buildings unique property number and UPRN)
     borough : str, optional
         London borough to filter table by.
         If none provided the whole of London will be returned.
         The default is None.
-
     Returns
     -------
-    ukb: dict
-        A dictionary containing the UK Buildings data in 'data' and a lookup
+    dict
+         A dictionary containing the UK Buildings data in 'data' and a lookup
         between UPRN and UBN in 'link_data'.
 
     """
@@ -130,15 +135,13 @@ def uk_buildings(borough: str = None) -> dict:
     boroughs = reference.london_boroughs(borough=borough, inc_geom=True)
     poly_27700 = boroughs.to_crs(27700).unary_union
 
-    ukb_file = (
-        "F:/project_folders/GIS/UK_Map/201910/GLA/GLA/UKBuildings_Edition_7_GLA.gdb"
-    )
     df = gpd.read_file(filename=ukb_file, bbox=boroughs)
     df = df.loc[df.geometry.intersects(poly_27700), :]
     df = df.assign(
         ubn=df.unique_building_number.astype(str),
         upn=df.unique_property_number.astype(str),
-    ).drop(columns=["unique_building_number", "unique_property_number"])
+    ).drop(columns=["unique_building_number", "unique_property_number", "geometry"])
+
     to_remove = [
         "res_",
         "residential_",
@@ -150,39 +153,7 @@ def uk_buildings(borough: str = None) -> dict:
     ]
     for string in to_remove:
         df.columns = df.columns.str.replace(string, "")
-    to_replace = {
-        "property_number": "pn",
-        "building_number": "bn",
-        "residential": "res",
-        "building": "bld",
-        "number": "no",
-        "dwelling": "dwell",
-        "bedroom": "bed",
-        "reception": "recep",
-        "text$": "t",
-        "modelled": "mod",
-        "source": "src",
-        "code": "cd",
-        "_+": "_",
-        "date": "dt",
-        "geographic": "geo",
-        "element": "el",
-        "count": "cnt",
-        "primary": "pri",
-        "revision": "rev",
-        "mapping": "map",
-        "block": "blk",
-        "wet_room": "wetroom",
-        "floor": "flo",
-        "type": "tp",
-        "entity": "ent",
-    }
-    for key, value in to_replace.items():
-        df.columns = df.columns.str.replace(key, value)
 
-    ukb_link_file = (
-        "F:/project_folders/GIS/UK_Map/201910/OSAB_UKBUILDINGS_NN_LINK_FILE_190822.csv"
-    )
     link_file = pd.read_csv(
         ukb_link_file,
         usecols=["upn", "ubn", "uprn", "udprn"],
@@ -222,10 +193,15 @@ if __name__ == "__main__":
     print("Saving file", file)
     gaz.to_csv(file, index=False)
 
-    ukb = uk_buildings(borough=borough)
-    file = "data/raw/local/uk_buildings.shp"
+    # This will need adjusted for your local file location
+    ukb = uk_buildings(
+        ukb_file="F:/project_folders/GIS/UK_Map/201910/GLA/GLA/UKBuildings_Edition_7_GLA.gdb",
+        ukb_link_file="F:/project_folders/GIS/UK_Map/201910/OSAB_UKBUILDINGS_NN_LINK_FILE_190822.csv",
+        borough=borough,
+    )
+    file = "data/raw/local/uk_buildings.csv"
     print("Saving file", file)
-    ukb["data"].to_file(file)
+    ukb["data"].to_csv(file, index=False)
     file = "data/raw/local/uk_buildings_link.csv"
     print("Saving file", file)
     ukb["link_data"].to_csv(file, index=False)
