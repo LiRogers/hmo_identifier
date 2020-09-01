@@ -66,7 +66,7 @@ def clean_estate_name(x: pd.Series) -> pd.Series:
     return x
 
 
-def match_prep(df: pd.DataFrame, add_var: str) -> pd.DataFame:
+def match_prep(df: pd.DataFrame, add_var: str) -> pd.DataFrame:
     """
     
     Prepare and clean a dataframe for address matching.
