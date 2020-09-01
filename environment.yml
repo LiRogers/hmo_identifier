@@ -1,10 +1,10 @@
 # run: conda env create --file environment.yml
-name: hmo_identifier
+name: hmo_test
 channels:
   - conda-forge
   - defaults
 dependencies:
-  - folium=0.10.1
+  - geopandas
   - shapely=1.7.0
   - psycopg2=2.8.4
   - pandas=0.25.3
@@ -13,17 +13,9 @@ dependencies:
   - jupyter
   - matplotlib
   - beautifulsoup4
-  - descartes
-  - xlrd
   - scikit-learn
-  - black
-  - sphinx=1.8.4
-  - m2r
-  - sphinx_rtd_theme
-  - nb_conda_kernels
-  - netcdf4
-  - lxml
-  - h5py
-  - contextily
-  - nltk
-  - ipykernel
+  - pip
+  - pip:
+    - recordlinkage
+
+
