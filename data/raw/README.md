@@ -65,13 +65,17 @@ Any other data held that would help determine or give an indication of:
 * Number of residents
 * Turnover of residents
 * Evidence of a negligent landlord.
+* Housing pressure.
 
-## Data which can be shared by the GLA
+## GLA
 
 In addition to the datasets detailed above, the GLA is able to share the 
 [UK Buildings](https://www.geomni.co.uk/ukbuildings) dataset with London Boroughs,
 please contact us for more details.
 This dataset contains information on building structure and can be matched to UPRN.
+
+The code to fetch this data, along with the GLA's copy of the gazatteer is included in `hmo_identifier.data.gla`.
+This will need to be adjusted for your local set up.
 
 
 
